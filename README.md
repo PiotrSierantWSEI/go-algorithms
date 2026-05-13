@@ -22,22 +22,35 @@ W katalogu głównym znajduje się skrypt [generate_report.go](generate_report.g
 Uruchomienie:
 
 ```bash
-go run ./generate_report.go -out sprawozdanie_algorytmy.pdf "Tytuł sprawozdania" "Imię Nazwisko" 123456
+go run ./generate_report.go "Tytuł sprawozdania" "Imię Nazwisko" 123456
 ```
 
-Argumenty:
+Plik PDF zostanie zapisany w folderze `generated/`.
+
+Argumenty pozycyjne:
 
 | Argument | Opis |
 | --- | --- |
-| `-out` | Ścieżka do pliku wyjściowego (domyślnie: `sprawozdanie_algorytmy.pdf`) |
 | `"Tytuł sprawozdania"` | Tytuł wyświetlany na stronie tytułowej |
 | `"Imię Nazwisko"` | Imię i nazwisko studenta |
 | `123456` | Numer indeksu studenta |
 
+Flagi opcjonalne:
+
+| Flaga | Opis |
+| --- | --- |
+| `-out` | Ścieżka do pliku wyjściowego (domyślnie: `generated/sprawozdanie_algorytmy.pdf`) |
+
 Przykład:
 
 ```bash
-go run ./generate_report.go -out sprawozdanie_algorytmy.pdf "Sprawozdanie zadan algorytmicznych" "Jan Kowalski" 123456
+go run ./generate_report.go "Sprawozdanie zadan algorytmicznych" "Jan Kowalski" 123456
+```
+
+Lub z niestandardową ścieżką:
+
+```bash
+go run ./generate_report.go -out generated/moj_raport.pdf "Sprawozdanie" "Jan Kowalski" 123456
 ```
 
 ## Uruchamianie programów

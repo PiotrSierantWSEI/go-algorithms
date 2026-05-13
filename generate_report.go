@@ -75,7 +75,7 @@ const (
 )
 
 func main() {
-	outputPath := flag.String("out", "sprawozdanie_algorytmy.pdf", "Sciezka pliku PDF wyjsciowego")
+	outputPath := flag.String("out", "generated/sprawozdanie_algorytmy.pdf", "Sciezka pliku PDF wyjsciowego")
 	flag.Parse()
 
 	args := flag.Args()
@@ -269,6 +269,11 @@ func buildPDF(pdf *gofpdf.Fpdf, tasks []task, fonts fontSet, outputPath, reportT
 		if err := addTaskSection(pdf, task, content); err != nil {
 			return err
 		}
+	}
+
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("nie mozna utworzyc katalogu %q: %w", outputDir, err)
 	}
 
 	if err := pdf.OutputFileAndClose(outputPath); err != nil {
