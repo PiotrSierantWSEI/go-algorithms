@@ -70,9 +70,11 @@ type markdownImage struct {
 const (
 	fontFamilyRegular    = "Regular"
 	fontFamilyMono       = "Mono"
-	resultSectionHeading = "## Screen dzialania programu / wynik skryptu"
+	resultImageBaseName  = "wynik"
 	resultSectionAltText = "Wynik"
 )
+
+var resultImageExtensions = []string{".png", ".jpg", ".jpeg", ".gif"}
 
 func main() {
 	outputPath := flag.String("out", "generated/sprawozdanie_algorytmy.pdf", "Sciezka pliku PDF wyjsciowego")
@@ -102,10 +104,10 @@ func main() {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(15, 15, 15)
 	pdf.SetAutoPageBreak(true, 15)
-	pdf.SetTitle(reportTitle, false)
-	pdf.SetAuthor(reportAuthor, false)
-	pdf.SetSubject(reportTitle, false)
-	pdf.SetCreator("generate_report.go", false)
+	pdf.SetTitle(reportTitle, true)
+	pdf.SetAuthor(reportAuthor, true)
+	pdf.SetSubject(reportTitle, true)
+	pdf.SetCreator("generate_report.go", true)
 
 	fonts, err := resolveFonts()
 	if err != nil {
@@ -326,11 +328,11 @@ func prepareTaskContent(task task) (string, error) {
 	}
 
 	readme := string(readmeBytes)
-	imageMarkdown, err := buildGeneratedImageSection(filepath.Dir(task.ReadmePath))
+	imageMarkdown, err := buildGeneratedImageMarkdown(filepath.Dir(task.ReadmePath), readme)
 	if err != nil {
 		return "", err
 	}
-	if imageMarkdown != "" && !hasGeneratedResultSection(readme) {
+	if imageMarkdown != "" {
 		readme = insertSectionBeforeSourceCode(readme, imageMarkdown)
 	}
 	if hasSourceCodeSection(readme) {
@@ -345,42 +347,40 @@ func prepareTaskContent(task task) (string, error) {
 	return appendGeneratedSourceCodeSection(readme, string(codeBytes), task.CodeLang), nil
 }
 
-func buildGeneratedImageSection(taskDir string) (string, error) {
-	imageFile, err := findFirstTaskImage(taskDir)
+func buildGeneratedImageMarkdown(taskDir, readme string) (string, error) {
+	imageFile, err := findTaskResultImage(taskDir)
 	if err != nil {
 		return "", err
 	}
-	if imageFile == "" {
+	if imageFile == "" || hasMarkdownImagePath(readme, imageFile) {
 		return "", nil
 	}
 
-	return resultSectionHeading + "\n\n" +
-		fmt.Sprintf("![%s](%s)\n", resultSectionAltText, filepath.ToSlash(imageFile)), nil
+	return fmt.Sprintf("![%s](%s)\n", resultSectionAltText, filepath.ToSlash(imageFile)), nil
 }
 
-func findFirstTaskImage(taskDir string) (string, error) {
+func findTaskResultImage(taskDir string) (string, error) {
 	entries, err := os.ReadDir(taskDir)
 	if err != nil {
 		return "", fmt.Errorf("nie mozna odczytac katalogu %s: %w", taskDir, err)
 	}
 
-	imageFiles := make([]string, 0)
+	filesByLowerName := make(map[string]string)
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
-		if isSupportedImageExtension(filepath.Ext(name)) {
-			imageFiles = append(imageFiles, name)
+		filesByLowerName[strings.ToLower(name)] = name
+	}
+
+	for _, ext := range resultImageExtensions {
+		if name, ok := filesByLowerName[resultImageBaseName+ext]; ok {
+			return name, nil
 		}
 	}
 
-	sort.Strings(imageFiles)
-	if len(imageFiles) == 0 {
-		return "", nil
-	}
-
-	return imageFiles[0], nil
+	return "", nil
 }
 
 func insertSectionBeforeSourceCode(readme, section string) string {
@@ -615,15 +615,16 @@ func normalizeInline(text string) string {
 	return text
 }
 
-func hasGeneratedResultSection(readme string) bool {
+func hasMarkdownImagePath(readme, imageFile string) bool {
+	expected := strings.ToLower(filepath.Base(filepath.FromSlash(imageFile)))
 	for _, rawLine := range splitLines(readme) {
 		line := strings.TrimSpace(rawLine)
-		if !strings.HasPrefix(line, "#") {
+		image, ok := parseMarkdownImage(line)
+		if !ok {
 			continue
 		}
-
-		heading := strings.TrimSpace(strings.TrimLeft(line, "#"))
-		if normalizeHeadingKey(heading) == "screen dzialania programu / wynik skryptu" {
+		actual := strings.ToLower(filepath.Base(filepath.FromSlash(image.Path)))
+		if actual == expected {
 			return true
 		}
 	}
@@ -644,15 +645,6 @@ func hasSourceCodeSection(readme string) bool {
 	}
 
 	return false
-}
-
-func isSupportedImageExtension(ext string) bool {
-	switch strings.ToLower(ext) {
-	case ".png", ".jpg", ".jpeg", ".gif":
-		return true
-	default:
-		return false
-	}
 }
 
 func appendGeneratedSourceCodeSection(readme, code, lang string) string {

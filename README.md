@@ -9,6 +9,7 @@ Repozytorium zawiera rozwiązania zadań algorytmicznych w języku Go.
 - zadanie3_liczby_czworacze
 - zadanie4_bisekcja_wielomian5
 - zadanie5_monte_carlo
+- zadanie6_algorytm_ewolucyjny
 
 ## Generator sprawozdania PDF
 
